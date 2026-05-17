@@ -1,0 +1,8 @@
+max_records       = 100        # must equal COMPILED_N baked into binary (set via LLOOGG_N env at build)
+ttl_seconds       = 3600
+aof_path          = "data/lloogg.aof"
+snapshot_path     = "data"
+snapshot_interval = 120        # seconds between automatic snapshots
+listen_port       = 7379
+memory_pool_slots = 1200000    # pre-allocated ring buffer slots (used when COMPILED_N > 200)
+aof_fsync         = "everysec" # "always" | "everysec" | "no"
