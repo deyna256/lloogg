@@ -162,7 +162,7 @@ mod tests {
         let snap_path = dir.path().to_str().unwrap();
 
         // Build store with 2 records for uid=10
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         let buf = store.get_or_create(10);
         unsafe {
             (*buf).push(make_record(100), 1_000);
@@ -173,7 +173,7 @@ mod tests {
         SnapshotManager::dump_sync(&store, snap_path, ts);
 
         // Load into fresh store
-        let mut store2 = Store::new();
+        let mut store2 = Store::with_pool_slots(64);
         let loaded_ts = SnapshotManager::load(snap_path, &mut store2).unwrap();
         assert_eq!(loaded_ts, ts);
         assert_eq!(store2.len(), 1);
@@ -192,7 +192,7 @@ mod tests {
     #[test]
     fn test_load_nonexistent_returns_zero() {
         let dir = tempfile::tempdir().unwrap();
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         let ts = SnapshotManager::load(dir.path().to_str().unwrap(), &mut store).unwrap();
         assert_eq!(ts, 0);
         assert_eq!(store.len(), 0);
@@ -205,7 +205,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let snap_path = dir.path().to_str().unwrap();
 
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         let buf = store.get_or_create(1);
         unsafe {
             (*buf).push(make_record(10), 10);
@@ -214,7 +214,7 @@ mod tests {
         }
         SnapshotManager::dump_sync(&store, snap_path, 999);
 
-        let mut store2 = Store::new();
+        let mut store2 = Store::with_pool_slots(64);
         SnapshotManager::load(snap_path, &mut store2).unwrap();
         let buf2 = store2.get(1).unwrap();
         let mut out = [Record::default(); 3];

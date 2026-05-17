@@ -1,5 +1,5 @@
 use super::helpers::*;
-use weloxs::{constants::*, snapshot::SnapshotManager, store::Store, time::now_ns};
+use lloogg::{constants::*, record::Record, snapshot::SnapshotManager, store::Store, time::now_ns};
 
 #[test]
 fn test_snapshot_recovery_restores_records() {
@@ -13,7 +13,7 @@ fn test_snapshot_recovery_restores_records() {
         let mut store = Store::with_pool_slots(1000);
         let buf = store.get_or_create(99);
         for ts in [10u64, 20, 30] {
-            unsafe { (*buf).push(weloxs::record::Record { event_type: 1, timestamp: ts, url_hash: 0 }, write_ts) };
+            unsafe { (*buf).push(Record { event_type: 1, timestamp: ts, url_hash: 0 }, write_ts) };
         }
         SnapshotManager::dump_sync(&store, snap_path, write_ts);
     }

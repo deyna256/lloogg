@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 use std::sync::Arc;
-use weloxs::{
+use lloogg::{
     aof::AOFWriter,
     config::Config,
     event_loop::{bind_listen_socket, EventLoop},
@@ -34,7 +34,7 @@ fn install_signal_handlers() {
 
 fn main() {
     env_logger::init();
-    log::info!("weloxs starting (COMPILED_N={})", weloxs::COMPILED_N);
+    log::info!("weloxs starting (COMPILED_N={})", lloogg::COMPILED_N);
 
     let args: Vec<String> = std::env::args().collect();
 

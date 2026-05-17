@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use crate::{
@@ -130,13 +130,10 @@ impl EventLoop {
                 )
             };
 
-            // Collect (fd, events) before mutable dispatch to avoid borrow conflicts
-            let ready: Vec<(i32, u32)> = events[..n.max(0) as usize]
-                .iter()
-                .map(|e| (e.u64 as i32, e.events))
-                .collect();
-
-            for (fd, flags) in ready {
+            let ready_count = n.max(0) as usize;
+            for i in 0..ready_count {
+                let fd = events[i].u64 as i32;
+                let flags = events[i].events;
                 if fd == self.listen_fd {
                     self.accept_connections();
                 } else if flags & libc::EPOLLIN as u32 != 0 {

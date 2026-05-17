@@ -102,7 +102,7 @@ mod tests {
         let aof_str = aof_path.to_str().unwrap();
 
         // Write snapshot with uid=1 at ts=100_000
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         let buf = store.get_or_create(1);
         unsafe { (*buf).push(make_record(100), 100_000) };
         SnapshotManager::dump_sync(&store, snap_path, 100_000);
@@ -115,7 +115,7 @@ mod tests {
         aof.shutdown();
 
         // Recover
-        let mut store2 = Store::new();
+        let mut store2 = Store::with_pool_slots(64);
         recover(&mut store2, snap_path, aof_str).unwrap();
 
         // uid=1: 2 records (100 from snapshot + 200 from AOF)
@@ -135,7 +135,7 @@ mod tests {
         let aof_str = aof_path.to_str().unwrap();
 
         // Snapshot at ts=200_000
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         let buf = store.get_or_create(1);
         unsafe { (*buf).push(make_record(100), 200_000) };
         SnapshotManager::dump_sync(&store, snap_path, 200_000);
@@ -147,7 +147,7 @@ mod tests {
         aof.flush_sync();
         aof.shutdown();
 
-        let mut store2 = Store::new();
+        let mut store2 = Store::with_pool_slots(64);
         recover(&mut store2, snap_path, aof_str).unwrap();
 
         let buf1 = store2.get(1).unwrap();
@@ -163,7 +163,7 @@ mod tests {
         let aof_str = aof_path.to_str().unwrap();
 
         // Snapshot with uid=1
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         let buf = store.get_or_create(1);
         unsafe { (*buf).push(make_record(100), 100_000) };
         SnapshotManager::dump_sync(&store, snap_path, 100_000);
@@ -174,7 +174,7 @@ mod tests {
         aof.flush_sync();
         aof.shutdown();
 
-        let mut store2 = Store::new();
+        let mut store2 = Store::with_pool_slots(64);
         recover(&mut store2, snap_path, aof_str).unwrap();
         assert!(store2.get(1).is_none());
     }
@@ -185,8 +185,39 @@ mod tests {
         let snap_path = dir.path().to_str().unwrap();
         let aof_path = dir.path().join("nonexistent.aof");
 
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         recover(&mut store, snap_path, aof_path.to_str().unwrap()).unwrap();
         assert_eq!(store.len(), 0);
+    }
+
+    #[test]
+    fn test_recovery_skips_unknown_aof_opcode() {
+        use crate::constants::OPCODE_PUSH;
+
+        let dir = tempfile::tempdir().unwrap();
+        let snap_path = dir.path().to_str().unwrap();
+        let aof_path = dir.path().join("unknown_op.aof");
+
+        // Build AOF manually: unknown opcode entry followed by valid PUSH
+        let mut data = Vec::<u8>::new();
+        data.push(0xFF); // unknown opcode
+        data.extend_from_slice(&1u32.to_le_bytes());
+        data.extend_from_slice(&200_000u64.to_le_bytes());
+        data.extend_from_slice(&0u16.to_le_bytes()); // no payload
+        // Valid PUSH after the unknown entry
+        let rec = make_record(42);
+        let rec_bytes: [u8; 17] = unsafe { std::mem::transmute(rec) };
+        data.push(OPCODE_PUSH);
+        data.extend_from_slice(&1u32.to_le_bytes());
+        data.extend_from_slice(&300_000u64.to_le_bytes());
+        data.extend_from_slice(&17u16.to_le_bytes());
+        data.extend_from_slice(&rec_bytes);
+        std::fs::write(&aof_path, &data).unwrap();
+
+        let mut store = Store::with_pool_slots(64);
+        recover(&mut store, snap_path, aof_path.to_str().unwrap()).unwrap();
+        // Unknown opcode skipped; valid PUSH still applied
+        let buf = store.get(1).unwrap();
+        assert_eq!(unsafe { (*buf).count }, 1);
     }
 }

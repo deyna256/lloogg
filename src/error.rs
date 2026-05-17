@@ -8,8 +8,7 @@ pub enum WeloxsError {
     Config(String),
     #[error("protocol error: {0}")]
     Protocol(String),
-    #[error("memory pool exhausted")]
-    PoolExhausted,
+
 }
 
 pub type Result<T> = std::result::Result<T, WeloxsError>;

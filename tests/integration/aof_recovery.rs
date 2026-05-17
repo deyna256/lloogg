@@ -1,5 +1,5 @@
 use super::helpers::*;
-use weloxs::constants::*;
+use lloogg::constants::*;
 
 #[test]
 fn test_aof_recovery_restores_pushed_records() {

@@ -10,6 +10,9 @@ use crate::{
     time::now_ns,
 };
 
+const AOF_HEADER_LEN: usize = 15; // opcode(1) + uid(4) + write_ts(8) + payload_len(2)
+const AOF_PUSH_LEN: usize = AOF_HEADER_LEN + 17; // header + Record wire size
+
 // SAFETY: AOFBuf is shared between event loop (writer) and flush thread (reader).
 // The ring buffer protocol guarantees disjoint access:
 // - Event loop writes to [head%SIZE .. head%SIZE+n) exclusively
@@ -76,7 +79,7 @@ impl AOFWriter {
 
     /// Write PUSH entry to AOF. Called from event loop thread only.
     pub fn append_push(&mut self, uid: u32, record: Record, write_ts: u64) {
-        let mut entry = [0u8; 32]; // 15 header + 17 payload
+        let mut entry = [0u8; AOF_PUSH_LEN];
         entry[0] = OPCODE_PUSH;
         entry[1..5].copy_from_slice(&uid.to_le_bytes());
         entry[5..13].copy_from_slice(&write_ts.to_le_bytes());
@@ -89,7 +92,7 @@ impl AOFWriter {
 
     /// Write DEL entry to AOF. Called from event loop thread only.
     pub fn append_del(&mut self, uid: u32, write_ts: u64) {
-        let mut entry = [0u8; 15];
+        let mut entry = [0u8; AOF_HEADER_LEN];
         entry[0] = OPCODE_DEL;
         entry[1..5].copy_from_slice(&uid.to_le_bytes());
         entry[5..13].copy_from_slice(&write_ts.to_le_bytes());
@@ -297,6 +300,19 @@ mod tests {
         writer.append_del(2, 2);
         writer.shutdown();
         let data = std::fs::read(&path).unwrap();
-        assert_eq!(data.len(), 32 + 15); // push + del
+        assert_eq!(data.len(), AOF_PUSH_LEN + AOF_HEADER_LEN);
+    }
+
+    #[test]
+    fn test_everysec_mode_writes_to_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("everysec.aof");
+        let mut writer = AOFWriter::open(path.to_str().unwrap(), FsyncMode::Everysec).unwrap();
+        writer.append_push(1, make_record(), 1);
+        writer.flush_sync();
+        writer.shutdown();
+        let data = std::fs::read(&path).unwrap();
+        assert_eq!(data.len(), AOF_PUSH_LEN);
+        assert_eq!(data[0], OPCODE_PUSH);
     }
 }

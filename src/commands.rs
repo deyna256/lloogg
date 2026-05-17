@@ -92,19 +92,17 @@ mod tests {
         conn
     }
 
-    fn make_aof() -> AOFWriter {
+    fn make_aof() -> (AOFWriter, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("test.aof");
-        // Leak the dir so the file lives for the test
-        let path_str = path.to_str().unwrap().to_string();
-        std::mem::forget(dir);
-        AOFWriter::open(&path_str, FsyncMode::No).unwrap()
+        let writer = AOFWriter::open(path.to_str().unwrap(), FsyncMode::No).unwrap();
+        (writer, dir)
     }
 
     #[test]
     fn test_push_creates_entry_responds_ok() {
-        let mut store = Store::new();
-        let mut aof = make_aof();
+        let mut store = Store::with_pool_slots(64);
+        let (mut aof, _dir) = make_aof();
         let r = Record { event_type: 5, timestamp: 1000, url_hash: 2000 };
         let mut conn = make_push_conn(99, r);
         push_command(&mut conn, &mut store, &mut aof);
@@ -114,7 +112,7 @@ mod tests {
 
     #[test]
     fn test_get_not_found_for_missing_uid() {
-        let store = Store::new();
+        let store = Store::with_pool_slots(64);
         let mut conn = make_get_conn(404, 1);
         get_command(&mut conn, &store);
         assert_eq!(conn.wbuf[2], STATUS_NOT_FOUND);
@@ -122,8 +120,8 @@ mod tests {
 
     #[test]
     fn test_push_then_get_newest_first() {
-        let mut store = Store::new();
-        let mut aof = make_aof();
+        let mut store = Store::with_pool_slots(64);
+        let (mut aof, _dir) = make_aof();
         for ts in [10u64, 20, 30] {
             let r = Record { event_type: 1, timestamp: ts, url_hash: 0 };
             push_command(&mut make_push_conn(1, r), &mut store, &mut aof);
@@ -143,8 +141,8 @@ mod tests {
 
     #[test]
     fn test_del_removes_entry_and_responds_ok() {
-        let mut store = Store::new();
-        let mut aof = make_aof();
+        let mut store = Store::with_pool_slots(64);
+        let (mut aof, _dir) = make_aof();
         push_command(&mut make_push_conn(5, Record::default()), &mut store, &mut aof);
         assert!(store.get(5).is_some());
         let mut conn = Connection::new(0);
@@ -156,8 +154,8 @@ mod tests {
 
     #[test]
     fn test_del_nonexistent_is_ok() {
-        let mut store = Store::new();
-        let mut aof = make_aof();
+        let mut store = Store::with_pool_slots(64);
+        let (mut aof, _dir) = make_aof();
         let mut conn = Connection::new(0);
         conn.rbuf[3..7].copy_from_slice(&999u32.to_le_bytes());
         del_command(&mut conn, &mut store, &mut aof);

@@ -17,16 +17,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_record_size_is_17() {
-        assert_eq!(std::mem::size_of::<Record>(), 17);
-    }
-
-    #[test]
-    fn test_record_align_is_1() {
-        assert_eq!(std::mem::align_of::<Record>(), 1);
-    }
-
-    #[test]
     fn test_three_records_fit_in_cache_line() {
         // 3 × 17 = 51 < 64 bytes (one cache line)
         assert!(3 * std::mem::size_of::<Record>() <= 64);

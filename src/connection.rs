@@ -82,25 +82,17 @@ impl Connection {
         Ok(count)
     }
 
-    /// Write 5-byte STATUS_OK response into wbuf.
-    pub fn write_ok_response(&mut self) {
+    fn write_response(&mut self, status: u8) {
         self.wbuf[0..2].copy_from_slice(&MAGIC_WIRE.to_le_bytes());
-        self.wbuf[2] = STATUS_OK;
+        self.wbuf[2] = status;
         self.wbuf[3..5].copy_from_slice(&0u16.to_le_bytes());
         self.wbuf_len = 5;
         self.wbuf_pos = 0;
         self.state = State::WriteResponse;
     }
 
-    /// Write 5-byte STATUS_NOT_FOUND response into wbuf.
-    pub fn write_not_found_response(&mut self) {
-        self.wbuf[0..2].copy_from_slice(&MAGIC_WIRE.to_le_bytes());
-        self.wbuf[2] = STATUS_NOT_FOUND;
-        self.wbuf[3..5].copy_from_slice(&0u16.to_le_bytes());
-        self.wbuf_len = 5;
-        self.wbuf_pos = 0;
-        self.state = State::WriteResponse;
-    }
+    pub fn write_ok_response(&mut self) { self.write_response(STATUS_OK); }
+    pub fn write_not_found_response(&mut self) { self.write_response(STATUS_NOT_FOUND); }
 
     /// Returns (opcode, user_id) from current rbuf (after header is read).
     pub fn header_opcode(&self) -> u8 { self.rbuf[2] }

@@ -3,7 +3,7 @@ use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tempfile::TempDir;
-use weloxs::{
+use lloogg::{
     aof::AOFWriter,
     config::{Config, FsyncMode},
     constants::*,
@@ -22,7 +22,7 @@ pub struct TestServer {
 
 impl TestServer {
     pub fn start() -> Self {
-        Self::start_with_recovery(false)
+        Self::start_with_recovery()
     }
 
     pub fn start_recovered(tmpdir: Option<TempDir>) -> Self {
@@ -48,7 +48,7 @@ impl TestServer {
         TestServer { port, shutdown, thread: Some(thread), tmpdir: Some(tmpdir) }
     }
 
-    fn start_with_recovery(_recover: bool) -> Self {
+    fn start_with_recovery() -> Self {
         let tmpdir = tempfile::tempdir().expect("tempdir");
         let aof_path = tmpdir.path().join("test.aof");
         let snap_path = tmpdir.path().to_str().unwrap().to_string();

@@ -99,10 +99,9 @@ mod tests {
     }
 
     #[test]
-    fn test_alloc_all_slots() {
+    fn test_alloc_returns_distinct_pointers() {
         let mut pool = MemoryPool::new(4, 64);
         let slots: Vec<*mut u8> = (0..4).map(|_| pool.alloc_slot()).collect();
-        // All slots are distinct
         for i in 0..slots.len() {
             for j in (i + 1)..slots.len() {
                 assert_ne!(slots[i], slots[j]);
@@ -112,12 +111,14 @@ mod tests {
     }
 
     #[test]
-    fn test_slot_size_separation() {
+    fn test_alloc_slots_are_slot_size_apart() {
         let slot_size = 128usize;
-        let pool = MemoryPool::new(4, slot_size);
-        // Slots must be exactly slot_size bytes apart
-        // (free list is built in order, first alloc = first slot)
-        drop(pool); // just verify no crash
+        let mut pool = MemoryPool::new(4, slot_size);
+        let a = pool.alloc_slot();
+        let b = pool.alloc_slot();
+        assert_eq!((a as usize).abs_diff(b as usize), slot_size);
+        pool.free_slot(a);
+        pool.free_slot(b);
     }
 
     #[test]

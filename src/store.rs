@@ -12,7 +12,6 @@ enum StoreAlloc {
     Slab {
         base: *mut u8,
         layout: Layout,
-        _slot_size: usize,
         free_list: *mut u8,
     },
     Pool(MemoryPool),
@@ -46,7 +45,7 @@ impl StoreAlloc {
                 // SAFETY: slot is valid writable memory within the slab
                 unsafe { *(slot as *mut *mut u8) = next; }
             }
-            StoreAlloc::Slab { base, layout, _slot_size: slot_size, free_list: base }
+            StoreAlloc::Slab { base, layout, free_list: base }
         } else {
             StoreAlloc::Pool(MemoryPool::new(total, slot_size))
         }
@@ -115,18 +114,12 @@ impl Store {
     /// Get existing or insert new RingBuffer for uid. O(1) amortised.
     #[inline]
     pub fn get_or_create(&mut self, uid: u32) -> *mut RingBuffer {
-        if !self.map.contains_key(&uid) {
-            let data = self.alloc.alloc();
-            let buf = RingBuffer {
-                data,
-                capacity: self.capacity,
-                head: 0,
-                count: 0,
-                last_write_ts: 0,
-            };
-            self.map.insert(uid, buf);
-        }
-        self.map.get_mut(&uid).unwrap() as *mut RingBuffer
+        let alloc = &mut self.alloc;
+        let capacity = self.capacity;
+        self.map.entry(uid).or_insert_with(|| {
+            let data = alloc.alloc();
+            RingBuffer { data, capacity, head: 0, count: 0, last_write_ts: 0 }
+        }) as *mut RingBuffer
     }
 
     /// Returns raw pointer to RingBuffer or None if absent. O(1). Never mutates.
@@ -171,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_get_or_create_returns_same_ptr() {
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         let a = store.get_or_create(42) as usize;
         let b = store.get_or_create(42) as usize;
         assert_eq!(a, b);
@@ -179,13 +172,13 @@ mod tests {
 
     #[test]
     fn test_get_returns_none_for_missing_key() {
-        let store = Store::new();
+        let store = Store::with_pool_slots(64);
         assert!(store.get(999).is_none());
     }
 
     #[test]
     fn test_push_and_get_roundtrip() {
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         let buf = store.get_or_create(1);
         unsafe { (*buf).push(make_record(100), 1000) };
         let buf2 = store.get(1).unwrap();
@@ -197,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_erase_removes_key() {
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         store.get_or_create(7);
         store.erase(7);
         assert!(store.get(7).is_none());
@@ -206,13 +199,13 @@ mod tests {
 
     #[test]
     fn test_erase_nonexistent_is_noop() {
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         store.erase(999);
     }
 
     #[test]
     fn test_for_each_visits_all_keys() {
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         for uid in [1u32, 2, 3] { store.get_or_create(uid); }
         let mut visited = std::collections::HashSet::new();
         store.for_each(|uid, _| { visited.insert(uid); });
@@ -221,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_len_tracks_insertions_and_erasures() {
-        let mut store = Store::new();
+        let mut store = Store::with_pool_slots(64);
         assert_eq!(store.len(), 0);
         store.get_or_create(1);
         store.get_or_create(2);
