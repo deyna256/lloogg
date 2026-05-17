@@ -1,0 +1,22 @@
+[package]
+name = "lloogg"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+csv = "1"
+env_logger = "0.11"
+hashbrown = "0.15"
+libc = "0.2"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 use std::sync::Arc;
 use weloxs::{
     aof::AOFWriter,
@@ -8,11 +8,14 @@ use weloxs::{
     store::Store,
 };
 
-// Global shutdown flag — signal handlers cannot capture Arc, so we use a static.
-static SHUTDOWN: AtomicBool = AtomicBool::new(false);
+// Signal handlers cannot capture Arc, so they publish to the active shutdown flag via a raw pointer.
+static SHUTDOWN_PTR: AtomicPtr<AtomicBool> = AtomicPtr::new(std::ptr::null_mut());
 
 extern "C" fn handle_signal(_: libc::c_int) {
-    SHUTDOWN.store(true, Ordering::SeqCst);
+    let ptr = SHUTDOWN_PTR.load(Ordering::SeqCst);
+    if !ptr.is_null() {
+        unsafe { (*ptr).store(true, Ordering::SeqCst) };
+    }
 }
 
 fn install_signal_handlers() {
@@ -56,6 +59,8 @@ fn main() {
     });
 
     // 5. Signal handlers (SIGTERM, SIGINT → shutdown; SIGPIPE → ignore)
+    let shutdown_flag = Arc::new(AtomicBool::new(false));
+    SHUTDOWN_PTR.store(Arc::as_ptr(&shutdown_flag) as *mut AtomicBool, Ordering::SeqCst);
     install_signal_handlers();
 
     // 6. Recovery: snapshot load + AOF replay
@@ -66,14 +71,6 @@ fn main() {
     log::info!("recovery complete: {} keys loaded", store.len());
 
     // 7. EventLoop (spawns TTL worker internally)
-    // Share the static SHUTDOWN flag via Arc wrapping the same AtomicBool pointer.
-    // SAFETY: SHUTDOWN lives for 'static; Arc will never free it.
-    let shutdown_flag = unsafe {
-        Arc::from_raw(&SHUTDOWN as *const AtomicBool)
-    };
-    // Prevent Arc from dropping the static — leak the strong count.
-    std::mem::forget(Arc::clone(&shutdown_flag));
-
     let event_loop = EventLoop::new(config, store, aof, listen_fd, shutdown_flag);
     event_loop.run();
 
