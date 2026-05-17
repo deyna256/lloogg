@@ -2,7 +2,7 @@ use serde::Deserialize;
 use crate::{
     COMPILED_N,
     constants::{MAX_RECORDS_PROTOCOL_LIMIT, MEMORY_POOL_SLOTS_DEFAULT, PORT_DEFAULT, SNAPSHOT_INTERVAL_S, CONFIG_PATH_DEFAULT},
-    error::{LlooggError, Result},
+    error::{WeloxsError, Result},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,39 +54,39 @@ impl Config {
 
     pub fn from_file(path: &str) -> Result<Self> {
         let content = std::fs::read_to_string(path)
-            .map_err(|e| LlooggError::Config(format!("cannot read {path}: {e}")))?;
+            .map_err(|e| WeloxsError::Config(format!("cannot read {path}: {e}")))?;
         let raw: RawConfig = toml::from_str(&content)
-            .map_err(|e| LlooggError::Config(format!("TOML parse error: {e}")))?;
+            .map_err(|e| WeloxsError::Config(format!("TOML parse error: {e}")))?;
         Self::validate(raw)
     }
 
     fn validate(raw: RawConfig) -> Result<Self> {
         if raw.max_records as usize != COMPILED_N {
-            return Err(LlooggError::Config(format!(
+            return Err(WeloxsError::Config(format!(
                 "max_records={} does not match COMPILED_N={} — rebuild binary or fix config",
                 raw.max_records, COMPILED_N
             )));
         }
         if raw.max_records > MAX_RECORDS_PROTOCOL_LIMIT {
-            return Err(LlooggError::Config(format!(
+            return Err(WeloxsError::Config(format!(
                 "max_records={} exceeds MAX_RECORDS_PROTOCOL_LIMIT={}",
                 raw.max_records, MAX_RECORDS_PROTOCOL_LIMIT
             )));
         }
         if raw.ttl_seconds == 0 {
-            return Err(LlooggError::Config("ttl_seconds must be > 0".into()));
+            return Err(WeloxsError::Config("ttl_seconds must be > 0".into()));
         }
         if raw.aof_path.is_empty() {
-            return Err(LlooggError::Config("aof_path is required".into()));
+            return Err(WeloxsError::Config("aof_path is required".into()));
         }
         if raw.snapshot_path.is_empty() {
-            return Err(LlooggError::Config("snapshot_path is required".into()));
+            return Err(WeloxsError::Config("snapshot_path is required".into()));
         }
         let fsync = match raw.aof_fsync.as_str() {
             "always"   => FsyncMode::Always,
             "everysec" => FsyncMode::Everysec,
             "no"       => FsyncMode::No,
-            other => return Err(LlooggError::Config(
+            other => return Err(WeloxsError::Config(
                 format!("unknown aof_fsync: '{other}' — expected always|everysec|no")
             )),
         };

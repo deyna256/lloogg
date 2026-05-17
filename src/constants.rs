@@ -21,7 +21,7 @@ pub const STATUS_NOT_FOUND: u8 = 0x02;
 pub const MEMORY_POOL_SLOTS_DEFAULT: u32 = 1_200_000;
 pub const MAX_RECORDS_PROTOCOL_LIMIT: u16 = 3_854;
 pub const LISTEN_BACKLOG: libc::c_int = 128;
-pub const CONFIG_PATH_DEFAULT: &str = "lloogg.toml";
+pub const CONFIG_PATH_DEFAULT: &str = "weloxs.toml";
 
 // Compile-time: ceil((7 + N*17) / 64) * 64
 pub const WBUF_SIZE: usize = (7 + COMPILED_N * 17).div_ceil(64) * 64;

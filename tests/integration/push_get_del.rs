@@ -1,5 +1,5 @@
 use super::helpers::*;
-use lloogg::constants::*;
+use weloxs::constants::*;
 
 #[test]
 fn test_push_get_del_roundtrip() {

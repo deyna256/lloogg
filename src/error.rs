@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum LlooggError {
+pub enum WeloxsError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
     #[error("config error: {0}")]
@@ -12,4 +12,4 @@ pub enum LlooggError {
     PoolExhausted,
 }
 
-pub type Result<T> = std::result::Result<T, LlooggError>;
+pub type Result<T> = std::result::Result<T, WeloxsError>;

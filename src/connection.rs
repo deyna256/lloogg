@@ -2,7 +2,7 @@ use crate::{
     COMPILED_N,
     constants::{MAGIC_WIRE, OPCODE_DEL, OPCODE_GET, OPCODE_PUSH, RBUF_SIZE,
                 STATUS_NOT_FOUND, STATUS_OK, WBUF_SIZE},
-    error::{Result, LlooggError},
+    error::{Result, WeloxsError},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -46,7 +46,7 @@ impl Connection {
     pub fn validate_header(&self) -> Result<(u8, u32, u16)> {
         let magic = u16::from_le_bytes(self.rbuf[0..2].try_into().unwrap());
         if magic != MAGIC_WIRE {
-            return Err(LlooggError::Protocol(format!(
+            return Err(WeloxsError::Protocol(format!(
                 "bad magic: {magic:#06x}, expected {MAGIC_WIRE:#06x}"
             )));
         }
@@ -58,11 +58,11 @@ impl Connection {
             OPCODE_PUSH => 17,
             OPCODE_GET  => 2,
             OPCODE_DEL  => 0,
-            _ => return Err(LlooggError::Protocol(format!("unknown opcode: {opcode:#04x}"))),
+            _ => return Err(WeloxsError::Protocol(format!("unknown opcode: {opcode:#04x}"))),
         };
 
         if payload_len != expected_payload {
-            return Err(LlooggError::Protocol(format!(
+            return Err(WeloxsError::Protocol(format!(
                 "opcode {opcode:#04x}: expected payload_len={expected_payload}, got {payload_len}"
             )));
         }
@@ -75,7 +75,7 @@ impl Connection {
     pub fn validate_get_count(&self) -> Result<u16> {
         let count = u16::from_le_bytes(self.rbuf[9..11].try_into().unwrap());
         if count == 0 || count as usize > COMPILED_N {
-            return Err(LlooggError::Protocol(format!(
+            return Err(WeloxsError::Protocol(format!(
                 "GET count={count} out of range [1, {COMPILED_N}]"
             )));
         }

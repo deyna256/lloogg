@@ -3,7 +3,7 @@ use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tempfile::TempDir;
-use lloogg::{
+use weloxs::{
     aof::AOFWriter,
     config::{Config, FsyncMode},
     constants::*,
@@ -12,8 +12,6 @@ use lloogg::{
     store::Store,
     COMPILED_N,
 };
-
-const TEST_POOL_SLOTS: u32 = 1000;
 
 pub struct TestServer {
     pub port: u16,
@@ -37,7 +35,7 @@ impl TestServer {
         let port = get_socket_port(listen_fd);
 
         let config = make_config(port, &aof_str, &snap_path);
-        let mut store = Store::with_pool_slots(TEST_POOL_SLOTS);
+        let mut store = Store::with_pool_slots(1000);
         recover(&mut store, &snap_path, &aof_str).expect("recovery failed");
         let aof = AOFWriter::open(&aof_str, FsyncMode::No).expect("aof open failed");
 
@@ -60,7 +58,7 @@ impl TestServer {
         let port = get_socket_port(listen_fd);
 
         let config = make_config(port, &aof_str, &snap_path);
-        let store = Store::with_pool_slots(TEST_POOL_SLOTS);
+        let store = Store::with_pool_slots(1000);
         let aof = AOFWriter::open(&aof_str, FsyncMode::No).expect("aof open failed");
 
         let shutdown = Arc::new(AtomicBool::new(false));
@@ -96,7 +94,7 @@ fn make_config(port: u16, aof_path: &str, snap_path: &str) -> Config {
         snapshot_path: snap_path.to_string(),
         snapshot_interval: 3600,
         listen_port: port,
-        memory_pool_slots: TEST_POOL_SLOTS,
+        memory_pool_slots: 1000,
         aof_fsync: FsyncMode::No,
     }
 }
