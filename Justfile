@@ -33,6 +33,10 @@ test-integration:
 bench:
     cargo run --bin bench --release -- 127.0.0.1:7379
 
+# Run interactive demo TUI (requires running server)
+demo HOST="127.0.0.1:7379":
+    cargo run --bin demo --release -- {{HOST}}
+
 # ── Lint / Check ──────────────────────────────────────
 # Check compilation
 check:

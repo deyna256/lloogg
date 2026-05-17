@@ -4,12 +4,19 @@ version = "0.1.0"
 edition = "2021"
 default-run = "lloogg"
 
+[[bin]]
+name = "demo"
+path = "src/bin/demo.rs"
+
 [dependencies]
 csv = "1"
+crossterm = "0.28"
 env_logger = "0.11"
 hashbrown = "0.15"
 libc = "0.2"
 log = "0.4"
+rand      = "0.9"
+ratatui   = "0.29"
 serde = { version = "1", features = ["derive"] }
 thiserror = "1"
 toml = "0.8"
