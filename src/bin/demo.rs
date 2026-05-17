@@ -136,7 +136,7 @@ mod tests {
             b[3..5].copy_from_slice(&0u16.to_le_bytes());
             b
         };
-        matches!(read_response(&mut wire).unwrap(), ServerResponse::Ok);
+        assert!(matches!(read_response(&mut wire).unwrap(), ServerResponse::Ok));
     }
 
     #[test]
@@ -147,7 +147,7 @@ mod tests {
             b[2] = STATUS_NOT_FOUND;
             b
         };
-        matches!(read_response(&mut wire).unwrap(), ServerResponse::NotFound);
+        assert!(matches!(read_response(&mut wire).unwrap(), ServerResponse::NotFound));
     }
 
     #[test]
