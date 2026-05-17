@@ -13,7 +13,7 @@ use lloogg::{
     COMPILED_N,
 };
 
-const TEST_POOL_SLOTS: u32 = 10;
+const TEST_POOL_SLOTS: u32 = 1000;
 
 pub struct TestServer {
     pub port: u16,

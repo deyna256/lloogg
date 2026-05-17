@@ -31,14 +31,18 @@ impl StoreAlloc {
         let total = total_slots as usize;
 
         if capacity as usize <= 200 {
-            let layout = Layout::from_size_align(total * slot_size, 8)
+            // Slab path: only used when capacity is small (COMPILED_N ≤ 200).
+            // memory_pool_slots config is designed for the mmap-backed MemoryPool (large N).
+            // Using 1.2M slots here would allocate gigabytes on the heap — cap at 1024.
+            let n = total.min(1024);
+            let layout = Layout::from_size_align(n * slot_size, 8)
                 .expect("invalid slab layout");
             // SAFETY: layout.size() > 0 guaranteed by assertions above
             let base = unsafe { alloc(layout) };
             assert!(!base.is_null(), "slab allocation failed");
-            for i in 0..total {
+            for i in 0..n {
                 let slot = unsafe { base.add(i * slot_size) };
-                let next = if i + 1 < total {
+                let next = if i + 1 < n {
                     unsafe { base.add((i + 1) * slot_size) }
                 } else {
                     std::ptr::null_mut()
